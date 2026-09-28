@@ -33,8 +33,8 @@
 ;; Angle-mods can be enabled here, i.e. ZXCVB can be shifted to the left.
 ;; More details here: https://colemakmods.github.io/ergonomic-mods/angle.html
 
-(include defsrc/layout.kbd)                ;; standard finger assignment
-;; (include defsrc/layout_anglemod.kbd)       ;; ZXCVB are shifted to the left
+;;(include defsrc/layout.kbd)                ;; standard finger assignment
+ (include defsrc/layout_anglemod.kbd)       ;; ZXCVB are shifted to the left
 ;; (include defsrc/layout_wide_anglemod.kbd)  ;; angle-mod + right hand shifted by one key
 
 
@@ -50,9 +50,9 @@
 ;;    - the left thumb key becomes Shift
 ;;    - SDF/JKL become Meta/Ctrl/Alt when held
 
-(include deflayer/base.kbd)            ;; standard keyboard behavior
+;;(include deflayer/base.kbd)            ;; standard keyboard behavior
 ;; (include deflayer/base_lt.kbd)         ;; layer-taps on thumb keys
-;; (include deflayer/base_lt_hrm.kbd)     ;; layer-taps + homerow mods
+ (include deflayer/base_lt_hrm.kbd)     ;; layer-taps + homerow mods
 
 ;; Note: not enabling layer-taps here makes the rest of the file useless.
 
@@ -65,16 +65,16 @@
 ;;  - holding right + left thumb keys brings a `Numbers` layer
 ;;    (= NumPad or NumRow, depending on the selected `Navigation` layer)
 
-(include deflayer/symbols.kbd)        ;; programming symbols
-;; (include deflayer/symbols_altgr.kbd)  ;; AltGr/Option layer
+;;(include deflayer/symbols.kbd)        ;; programming symbols
+ (include deflayer/symbols_altgr.kbd)  ;; AltGr/Option layer
 
 
 ;;-----------------------------------------------------------------------------
 ;; `Navigation` Layer: ESDF or HJKL?
 ;;-----------------------------------------------------------------------------
 
-(include deflayer/navigation.kbd)      ;; arrows on ESDF, NumPad under the right hand
-;; (include deflayer/navigation_vim.kbd)  ;; arrows on HJKL, NumPad on [Space]+[Q]
+;;(include deflayer/navigation.kbd)      ;; arrows on ESDF, NumPad under the right hand
+ (include deflayer/navigation_vim.kbd)  ;; arrows on HJKL, NumPad on [Space]+[Q]
 
 
 ;;-----------------------------------------------------------------------------
@@ -90,11 +90,11 @@
 ;; Symbols and shortcuts in the Navigation layer depend on the keyboard layout.
 ;; Pick your aliases accordingly.
 
-(include defalias/qwerty.kbd)
+;;(include defalias/qwerty.kbd)
 ;; (include defalias/qwertz.kbd)
 ;; (include defalias/azerty.kbd)
 ;; (include defalias/lafayette.kbd)
-;; (include defalias/ergol.kbd)
+ (include defalias/ergol.kbd)
 ;; (include defalias/bepo.kbd)
 
 
