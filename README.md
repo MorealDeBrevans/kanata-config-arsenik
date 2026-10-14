@@ -19,18 +19,21 @@ In a Nutshell
 
 ![base, navigation and sym layers on a 33-key keyboard](img/arsenik.svg)
 
-<!--  No release yet. Propose a zip archive instead. -->
-[dl-aekeynox]: https://github.com/OneDeadKey/kanata-config-aekeynox/archive/refs/heads/main.zip
-[dl-kanata]:   https://github.com/jtroo/kanata/releases
+<!-- skip the latest Kanata release (1.12.0)
+[dl-kanata]:   https://github.com/jtroo/kanata/releases/latest
+-->
+[dl-kanata]:   https://github.com/jtroo/kanata/releases/tag/v1.11.0
+[dl-aekeynox]: https://github.com/OneDeadKey/kanata-config-aekeynox/releases/latest
 
 
 Usage
 --------------------------------------------------------------------------------
 
 - Get Ækeynox:
-  - check out this repository with Git or [download it][dl-aekeynox]
+  - download the [latest release][dl-aekeynox],
+    or check out this repository with Git
   - [configure `kanata.kbd`](#configuration): Ækeynox-kanata does nothing by
-    default, every feature must be enabled on an opt-in basis.
+    default, every feature must be enabled on an opt-in basis
 - Get Kanata:
   - download a [pre-built executable][dl-kanata]
   - unzip it into the Ækeynox folder
@@ -41,81 +44,112 @@ See OS-specific instructions below.
 
 ### Windows
 
-There are several Kanata variants for Windows. We recommend using
-`kanata_windows_gui_winIOv2_[arch].exe`: put it in the Ækeynox folder, start it
+There are several Kanata variants for Windows. We recommend using the
+`gui_winIOv2` variant: put it in the Ækeynox folder, start it
 (double-click), and Kanata will run in the background. It can be reloaded or
 exited with a right-click on its systray icon.
 
+> [!WARNING]
+> Due to a regression in Kanata 1.12.0 ([issue #2115]), Windows users should
+> skip this version. A [workaround] can be used with the next release, by
+> setting `windows-sync-keystates` to `none` in `defsrc/settings.kbd`:
+
+```lisp
+  ;; Works around a regression introduced by Kanata-winIOv2 1.12.0,
+  ;; but requires Kanata 1.13.0 or newer.
+  ;; https://github.com/jtroo/kanata/issues/2115
+  windows-sync-keystates none
+```
+
+[issue #2115]: https://github.com/jtroo/kanata/issues/2115
+[workaround]:  https://github.com/jtroo/kanata/issues/2122
+
 ### Linux
+
+Kanata is available as an official package in most Linux distributions.
+
+For Kanata to start automatically after login, follow the two sections below.
 
 <details>
 <summary>Run Kanata without <code>sudo</code></summary>
 
-Kanata needs to intercept `uinput` signals, which it cannot do without the
-proper authorisations.
-
-If you don’t want to run `kanata` with `sudo`, you’ll need to allow Kanata to
-read from `uinput`. This requires the users to be part of both `input` and
-`uinput` groups.
-
-For that, you first need to create a `uinput` group if it doesn’t exist yet:
+Kanata has to access the `input` and `uinput` subsystems, which requires proper
+authorizations. To avoid running Kanata with `sudo`, your user must be added to
+these groups:
 
 ```bash
-sudo groupadd -U $USERNAME uinput
+# Create the `uinput` group if it doesn't exist
+sudo groupadd --system uinput
+
+# Add your user to the `input` and `uinput` groups
+sudo usermod -aG input $USER
+sudo usermod -aG uinput $USER
 ```
 
-where `$USERNAME` is the target user (or users in a comma-separated list). Then
-add the target user (or users) to the group input:
+You’ll have to log out and relog in (or even reboot) for these changes to apply.
+Make sure the `input` and `uinput` groups appear in the output of the `groups`
+command.
+
+Now create a `udev` rule to give `uinput` the required permissions:
 
 ```bash
-sudo usermod -aG input $USERNAME
-```
-
-You can check after re-logging that both groups appear in the result of the
-`groups` command launched as the target user.
-
-Finally, you need to add a udev rule in `/etc/udev/rules.d/50-kanata.rules`:
-
-```udev
+# Create the udev rule for `uinput`
+sudo tee /etc/udev/rules.d/99-input.rules > /dev/null <<EOF
 KERNEL=="uinput", MODE="0660", GROUP="uinput", OPTIONS+="static_node=uinput"
+EOF
+
+# Reload udev rules
+sudo udevadm control --reload && udevadm trigger
 ```
+
 </details>
 
 <details>
-<summary>Make a User-Side <code>systemd</code> Service for Kanata</summary>
+<summary>Make a user-side <code>systemd</code> service for Kanata</summary>
 
-Note: This only works if `kanata` is able to run without `sudo` (and is using
-`systemd`).
+Now that Kanata can run without `sudo` permissions, we can use a systemd
+service to run it as a daemon right after logging in.
 
-Using a `systemd service` allows running `kanata` as a daemon, possibly right
-after logging in. Here is a template for a service file:
+Create this file:
+
+```
+~/.config/systemd/user/kanata.service
+```
+
+with the following content:
 
 ```properties
 [Unit]
-Description=kanata keyboard remapper
+Description=Kanata keyboard remapper
 Documentation=https://github.com/jtroo/kanata
 
 [Service]
 Environment=PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/bin
-Environment=DISPLAY=:0
-Environment=HOME=/path/to/home/folder
 Type=simple
-ExecStart=/usr/local/bin/kanata --cfg /path/to/kanata/config/file
+ExecStart=/path/to/kanata --cfg /path/to/kanata/config.kbd
 Restart=no
 
 [Install]
 WantedBy=default.target
 ```
 
-Copy-paste it into `~/.config/systemd/user/kanata.service`, fill in the
-placeholders, then run one of the following commands:
+Replace `/path/to/kanata` and `/path/to/kanata/config.kbd` by the proper paths
+of the Kanata executable and the Ækeynox configuration file, respectively.
 
-- `systemctl --user start kanata.service` to manually start `kanata`
-- `systemctl --user enable kanata.service` so `kanata` may autostart whenever
-the current user logs in
-- `systemctl --user status kanata.service` to check if `kanata` is running
+Now enable `kanata.service` and make sure it’s running:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable kanata.service  # auto-start Kanata when user logs in
+systemctl --user start  kanata.service  # start Kanata manually
+systemctl --user status kanata.service  # check that the service is running
+```
+
 </details>
 
+[See the Kanata documentation](linux) for further information.
+
+[linux]: https://github.com/jtroo/kanata/blob/main/docs/setup-linux.md
 
 ### macOS
 
@@ -236,6 +270,7 @@ Therefore, it does nothing by default; every feature must be enabled one by one.
 
 The main `kanata.kbd` file should be enough for most users. All features are
 (quickly) documented, just make sure that:
+
 - existing sections are neither deleted nor reordered;
 - each section has **one** and only one `(include)` statement.
 
@@ -253,8 +288,98 @@ you don’t want to follow the Arsenik spec.
 ```
 
 > [!TIP]
-> when layer-taps are activated, the whole configuration can be live-reloaded
+> When layer-taps are activated, the whole configuration can be live-reloaded
 > with <kbd>Space</kbd>+<kbd>Esc</kbd>.
+
+<details>
+<summary>Bonus: restrict Kanata to the laptop keyboard</summary>
+
+On macOS and Linux, starting with version v1.10.0, Kanata can be configured to
+ignore external keyboards.
+
+First, find your laptop keyboard with `kanata --list`. The output looks like
+this:
+
+```
+Available keyboard devices:
+===========================
+Found 2 keyboard device(s):
+
+  1. "ThinkPad Extra Buttons"
+     Path: /dev/input/event9
+     Vendor ID: 6058 (0x17AA), Product ID: 20564 (0x5054)
+
+  2. "AT Translated Set 2 keyboard"
+     Path: /dev/input/event3
+     Vendor ID: 1 (0x0001), Product ID: 1 (0x0001)
+
+Configuration example:
+  (defcfg
+    linux-dev-names-include (
+      "ThinkPad Extra Buttons"
+      "AT Translated Set 2 keyboard"
+    )
+  )
+```
+
+Then copy the `linux-dev-names-include` section (or `macos-dev-names-include` on
+Mac) into the `defcfg` section in `defsrc/settings.kbd`.
+
+More information in Kanata’s configuration guide:
+[linux-dev-names-include](https://jtroo.github.io/config.html#linux-only-linux-dev-names-include),
+[macos-dev-names-include](https://jtroo.github.io/config.html#macos-only-macos-dev-names-include).
+
+</details>
+
+
+Keyboard Layout
+--------------------------------------------------------------------------------
+
+The `Symbols` layer, as well as the keyboard shortcuts in the `Navigation`
+layer, depend on the keyboard layout: QWERTY, AZERTY, QWERTZ… This keyboard
+layout must be selected accordingly in the last configuration section.
+
+If your keyboard layout isn’t already supported, creating the corresponding
+aliases file should be straightforward. Pull requests are welcome, and our
+maintainers can assist you if needed.
+
+We recommend using the default `Symbols` layer (`symbols.kbd`) for any keyboard
+layout; however, there are two edge cases where you could prefer an
+<kbd>AltGr</kbd>/<kbd>Option</kbd> layer (`symbols_altgr`):
+
+- when your keyboard layout already has an optimized `Symbols` layer (e.g.
+  Ergo‑L or QWERTY-Lafayette, which already have Ækeynox’s Symbols layer,
+  or Neo, which has its own Symbols layer);
+- when your keyboard layout requires <kbd>AltGr</kbd> or <kbd>Option</kbd> for
+  common text input (e.g. Bépo).
+
+(Note for European users: don’t worry about the € sign, it’s available on
+<kbd>Nav</kbd><kbd>'</kbd> or <kbd>Sym</kbd><kbd>'</kbd>.)
+
+
+Troubleshooting
+--------------------------------------------------------------------------------
+
+Some combinations of three keys might not work on a standard keyboard, due to
+[ghosting], which is a hardware problem that Kanata cannot fix.
+
+Here’s a common example on ThinkPad, with the `NumRow` layer:
+
+- press <kbd>Sym</kbd>
+- press <kbd>Shift</kbd> (=> brings the `NumRow` layer)
+- tap <kbd>G</kbd>
+
+Expected result: types a `5`.<br>
+Actual result: nothing happens.
+
+The workaround consists in releasing a key:
+
+- press <kbd>Sym</kbd>
+- press <kbd>Shift</kbd> (=> brings the `NumRow` layer)
+- *release <kbd>Sym</kbd>* (=> `NumRow` is still active)
+- tap <kbd>G</kbd>
+
+[ghosting]: https://en.wikipedia.org/wiki/Key_rollover#Ghosting
 
 
 Why the name?
